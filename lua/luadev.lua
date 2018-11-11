@@ -91,20 +91,19 @@ local function dedent(str, leave_indent)
   return str
 end
 
-local function exec(str,doeval)
-  local code = str
-  if doeval then
-    code = "return \n"..str
+local function exec(str)
+  local chunk, err = loadstring("return \n"..str,"e")
+  if chunk == nil then
+    chunk, err = loadstring(str,"x")
   end
-  local chunk, err = loadstring(code,"g")
   local inlines = splitlines(dedent(str))
   if inlines[#inlines] == "" then
     inlines[#inlines] = nil
   end
   for i,l in ipairs(inlines) do
-    inlines[i] = "> "..l
+    local marker = ((i == 1) and ">") or "."
+    inlines[i] = marker.." "..l
   end
-  append_buf({""})
   local start = append_buf(inlines)
   for i,_ in ipairs(inlines) do
      a.nvim_buf_add_highlight(s.buf, -1, "Question", start+i-1, 0, 2)
@@ -122,6 +121,7 @@ local function exec(str,doeval)
       append_buf(require'inspect'(res))
     end
   end
+  append_buf({""})
 end
 
 local function start()
