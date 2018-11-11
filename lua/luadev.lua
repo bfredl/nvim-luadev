@@ -91,8 +91,12 @@ local function dedent(str, leave_indent)
   return str
 end
 
-local function exec(str)
-  local chunk, err = loadstring(str,"g")
+local function exec(str,doeval)
+  local code = str
+  if doeval then
+    code = "return \n"..str
+  end
+  local chunk, err = loadstring(code,"g")
   local inlines = splitlines(dedent(str))
   if inlines[#inlines] == "" then
     inlines[#inlines] = nil
@@ -110,10 +114,12 @@ local function exec(str)
   else
     local oldprint = _G.print
     _G.print = luadev_print
-    local st, err2 = pcall(chunk)
+    local st, res = pcall(chunk)
     _G.print = oldprint
     if st == false then
-      append_buf({err2},"WarningMsg")
+      append_buf({res},"WarningMsg")
+    elseif doeval or res ~= nil then
+      append_buf(require'inspect'(res))
     end
   end
 end
