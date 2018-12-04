@@ -1,3 +1,5 @@
+local nvimlua_inspect = require'luadev.inspect'
+
 local a = vim.api
 if _G.__lua_dev_state == nil then
     _G.__lua_dev_state = {}
@@ -118,7 +120,7 @@ local function exec(str)
     if st == false then
       append_buf({res},"WarningMsg")
     elseif doeval or res ~= nil then
-      append_buf(require'inspect'(res))
+      append_buf(nvimlua_inspect(res))
     end
   end
   append_buf({""})
