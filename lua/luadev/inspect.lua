@@ -289,7 +289,7 @@ function Inspector:putValue(v)
   if tv == 'string' then
     self:puts(smartQuote(escape(v)))
   elseif tv == 'number' or tv == 'boolean' or tv == 'nil' or
-         tv == 'cdata' or tv == 'ctype' then
+         tv == 'cdata' or tv == 'ctype' or tv == 'userdata' then
     self:puts(tostring(v))
   elseif tv == 'table' then
     self:putTable(v)
