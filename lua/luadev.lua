@@ -65,9 +65,13 @@ local function append_buf(lines, hl)
   return l0
 end
 
-local function luadev_print(x) -- TODO: ...
-  local str = tostring(x)
-  append_buf({str})
+local function luadev_print(...)
+  local strs = {}
+  local args = {...}
+  for i = 1,select('#', ...) do
+    strs[i] = tostring(args[i])
+  end
+  append_buf(table.concat(strs, ' '))
 end
 
 local function dedent(str, leave_indent)
