@@ -102,19 +102,17 @@ local function dedent(str, leave_indent)
   return str
 end
 
-local function ld_pcall(chunk)
+local function ld_pcall(chunk, ...)
   local coro = coroutine.create(chunk)
-  local status, res = coroutine.resume(coro)
-  if status then
-    return true, res
-  else
+  local res = {coroutine.resume(coro, ...)}
+  if not res[1] then
     _G._errstack = coro
     -- if the only frame on the traceback is the chunk itself, skip the traceback
     if debug.getinfo(coro, 0,"f").func ~= chunk then
-      res = debug.traceback(coro, res, 0)
+      res[2] = debug.traceback(coro, res[2], 0)
     end
-    return false, res
   end
+  return unpack(res)
 end
 
 local function exec(str)
@@ -154,12 +152,32 @@ local function start()
   open_win()
 end
 
+local function err_wrap(cb)
+  return (function (...)
+    local res = {ld_pcall(cb, ...)}
+    if not res[1] then
+      open_win()
+      append_buf(res[2],"WarningMsg")
+      return nil
+    else
+      table.remove(res, 1)
+      return unpack(res)
+    end
+  end)
+end
+
+local function schedule_wrap(cb)
+  return vim.schedule_wrap(err_wrap(cb))
+end
+
 local mod = {
   create_buf=create_buf,
   start=start,
   exec=exec,
   print=luadev_print,
-  append_buf=append_buf
+  append_buf=append_buf,
+  err_wrap = err_wrap,
+  schedule_wrap = schedule_wrap,
 }
 
 -- TODO: export abstraction for autoreload
