@@ -6,22 +6,26 @@ if _G.__lua_dev_state == nil then
 end
 local s = _G.__lua_dev_state
 
-local function create_buf(window)
+local function create_buf()
   if s.buf ~= nil then
     return
   end
+  local buf = a.nvim_create_buf(true,true)
+  a.nvim_buf_set_name(buf, "[nvim-lua]")
+  s.buf = buf
+end
+
+local function open_win()
+  if s.win and a.nvim_win_is_valid(s.win) and a.nvim_win_get_buf(s.win) == s.buf then
+    return
+  end
+  create_buf()
   local w0 = a.nvim_get_current_win()
   a.nvim_command("new")
-  local buf = a.nvim_get_current_buf()
-  a.nvim_buf_set_option(buf, 'swapfile', false)
-  a.nvim_buf_set_option(buf, 'buftype', 'nofile')
-  a.nvim_buf_set_name(buf, "[nvim-lua]")
-
-  if not window then
-    a.nvim_command("quit")
-  end
+  local w = a.nvim_get_current_win()
+  a.nvim_win_set_buf(w,s.buf)
   a.nvim_set_current_win(w0)
-  s.buf = buf
+  s.win = w
 end
 
 local function dosplit(str, delimiter)
@@ -38,7 +42,7 @@ local function dosplit(str, delimiter)
 end
 
 local function splitlines(str)
- return dosplit(str, "\n")
+  return vim.split(str, "\n", true)
 end
 
 local function append_buf(lines, hl)
@@ -49,6 +53,7 @@ local function append_buf(lines, hl)
   if type(lines) == type("") then
     lines = splitlines(lines)
   end
+
   a.nvim_buf_set_lines(s.buf, l0, l0, true, lines)
   local l1 = a.nvim_buf_line_count(s.buf)
   if hl ~= nil then
@@ -97,10 +102,25 @@ local function dedent(str, leave_indent)
   return str
 end
 
+local function ld_pcall(chunk)
+  local coro = coroutine.create(chunk)
+  local status, res = coroutine.resume(coro)
+  if status then
+    return true, res
+  else
+    _G._errstack = coro
+    -- if the only frame on the traceback is the chunk itself, skip the traceback
+    if debug.getinfo(coro, 0,"f").func ~= chunk then
+      res = debug.traceback(coro, res, 0)
+    end
+    return false, res
+  end
+end
+
 local function exec(str)
-  local chunk, err = loadstring("return \n"..str,"e")
+  local chunk, err = loadstring("return \n"..str,"eval")
   if chunk == nil then
-    chunk, err = loadstring(str,"x")
+    chunk, err = loadstring(str,"exec")
   end
   local inlines = splitlines(dedent(str))
   if inlines[#inlines] == "" then
@@ -115,14 +135,14 @@ local function exec(str)
      a.nvim_buf_add_highlight(s.buf, -1, "Question", start+i-1, 0, 2)
   end
   if chunk == nil then
-    append_buf({err},"WarningMsg")
+    append_buf(err,"WarningMsg")
   else
     local oldprint = _G.print
     _G.print = luadev_print
-    local st, res = pcall(chunk)
+    local st, res = ld_pcall(chunk)
     _G.print = oldprint
     if st == false then
-      append_buf({res},"WarningMsg")
+      append_buf(res,"WarningMsg")
     elseif doeval or res ~= nil then
       append_buf(nvimlua_inspect(res))
     end
@@ -131,10 +151,11 @@ local function exec(str)
 end
 
 local function start()
-  create_buf(true)
+  open_win()
 end
 
 local mod = {
+  create_buf=create_buf,
   start=start,
   exec=exec,
   print=luadev_print,
