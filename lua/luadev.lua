@@ -47,7 +47,7 @@ end
 
 local function append_buf(lines, hl)
   if s.buf == nil then
-    return
+    create_buf()
   end
   local l0 = a.nvim_buf_line_count(s.buf)
   if type(lines) == type("") then
