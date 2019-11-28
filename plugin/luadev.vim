@@ -1,8 +1,8 @@
 command! Luadev lua require'luadev'.start()
 
 noremap <Plug>(Luadev-RunLine) <Cmd>lua require'luadev'.exec(vim.api.nvim_get_current_line())<cr>
-vnoremap <Plug>(Luadev-Run) :<c-u>call luaeval("require'luadev'.exec(_A)", <SID>get_visual_selection())<cr>
-noremap <Plug>(Luadev-RunWord) :<c-u>call luaeval("require'luadev'.exec(_A)", <SID>get_current_word())<cr>
+vnoremap <silent> <Plug>(Luadev-Run) :<c-u>call luaeval("require'luadev'.exec(_A)", <SID>get_visual_selection())<cr>
+noremap <silent> <Plug>(Luadev-RunWord) :<c-u>call luaeval("require'luadev'.exec(_A)", <SID>get_current_word())<cr>
 inoremap <Plug>(Luadev-Complete) <Cmd>lua require'luadev.complete'()<cr>
 
 " thanks to @xolox on stackoverflow
