@@ -2,9 +2,11 @@ local nvimlua_inspect = require'luadev.inspect'
 
 local a = vim.api
 if _G.__lua_dev_state == nil then
-    _G.__lua_dev_state = {}
+    _G.__lua_dev_state = {mod = {}}
 end
+-- TODO: no need for secrecy, just put everything on the "mod" obj
 local s = _G.__lua_dev_state
+local mod = s.mod
 
 local function create_buf()
   if s.buf ~= nil then
@@ -115,11 +117,17 @@ local function ld_pcall(chunk, ...)
   return unpack(res)
 end
 
-local function exec(str)
+local function default_reader(str)
   local chunk, err = loadstring("return \n"..str,"eval")
   if chunk == nil then
     chunk, err = loadstring(str,"exec")
   end
+  return chunk, err
+end
+
+local function exec(str)
+  local reader = mod.reader or default_reader
+  local chunk, err = reader(str)
   local inlines = splitlines(dedent(str))
   if inlines[#inlines] == "" then
     inlines[#inlines] = nil
@@ -170,7 +178,7 @@ local function schedule_wrap(cb)
   return vim.schedule_wrap(err_wrap(cb))
 end
 
-local mod = {
+local funcs = {
   create_buf=create_buf,
   start=start,
   exec=exec,
@@ -181,11 +189,7 @@ local mod = {
 }
 
 -- TODO: export abstraction for autoreload
-if s.mod == nil then
-  s.mod = mod
-else
-  for k,v in pairs(mod) do
-    s.mod[k] = v
-  end
+for k,v in pairs(funcs) do
+  s.mod[k] = v
 end
 return s.mod
