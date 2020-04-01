@@ -244,6 +244,12 @@ function Inspector:putTable(t)
 
     local nonSequentialKeys, nonSequentialKeysLength, sequenceLength = getNonSequentialKeys(t)
     local mt                = getmetatable(t)
+    if (vim and vim._empty_dict_mt
+        and sequenceLength == 0 and nonSequentialKeysLength == 0
+        and mt == vim._empty_dict_mt) then
+      self:puts(tostring(t))
+      return
+    end
 
     self:puts('{')
     self:down(function()
