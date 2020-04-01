@@ -1,12 +1,11 @@
-local nvimlua_inspect = require'luadev.inspect'
+local luadev_inspect = require'luadev.inspect'
 
 local a = vim.api
-if _G.__lua_dev_state == nil then
-    _G.__lua_dev_state = {mod = {}}
+if _G._luadev_mod == nil then
+    _G._luadev_mod = {execount = 0}
 end
--- TODO: no need for secrecy, just put everything on the "mod" obj
-local s = _G.__lua_dev_state
-local mod = s.mod
+
+local s = _G._luadev_mod
 
 local function create_buf()
   if s.buf ~= nil then
@@ -117,23 +116,28 @@ local function ld_pcall(chunk, ...)
   return unpack(res)
 end
 
-local function default_reader(str)
-  local chunk, err = loadstring("return \n"..str,"eval")
+local function default_reader(str, count)
+  local name = "@[luadev "..count.."]"
+  local chunk, err = loadstring("return \n"..str, name)
   if chunk == nil then
-    chunk, err = loadstring(str,"exec")
+    chunk, err = loadstring(str, name)
   end
   return chunk, err
 end
 
 local function exec(str)
-  local reader = mod.reader or default_reader
-  local chunk, err = reader(str)
+  local count = s.execount + 1
+  s.execount = count
+  local reader = s.reader or default_reader
+  local chunk, err = reader(str, count)
   local inlines = splitlines(dedent(str))
   if inlines[#inlines] == "" then
     inlines[#inlines] = nil
   end
+  firstmark = tostring(count)..">"
+  contmark = string.rep(".", string.len(firstmark))
   for i,l in ipairs(inlines) do
-    local marker = ((i == 1) and ">") or "."
+    local marker = ((i == 1) and firstmark) or contmark
     inlines[i] = marker.." "..l
   end
   local start = append_buf(inlines)
@@ -150,7 +154,7 @@ local function exec(str)
     if st == false then
       append_buf(res,"WarningMsg")
     elseif doeval or res ~= nil then
-      append_buf(nvimlua_inspect(res))
+      append_buf(luadev_inspect(res))
     end
   end
   append_buf({""})
@@ -190,6 +194,6 @@ local funcs = {
 
 -- TODO: export abstraction for autoreload
 for k,v in pairs(funcs) do
-  s.mod[k] = v
+  s[k] = v
 end
-return s.mod
+return s
