@@ -13,15 +13,28 @@ local function complete()
   end
   --require'luadev'.print(status,obj,y,z)
   local entries = {}
-  -- TODO: metatable of userdata? (and for tables..)
-  if (not status) or type(obj) ~= 'table' then
+
+  if (not status) then
     return
   end
-  for k,_ in pairs(obj) do
-    if type(k) == "string" and k:sub(1,string.len(z)) == z then
-      table.insert(entries,k)
+
+  local function insertify(o)
+    for k,_ in pairs(o) do
+      if type(k) == "string" and k:sub(1,string.len(z)) == z then
+        table.insert(entries,k)
+      end
     end
   end
+
+  if type(obj) == 'table' then
+    insertify(obj)
+  end
+
+  local index = (getmetatable(obj) or {}).__index
+  if type(index) == 'table' then
+    insertify(index)
+  end
+
   local start = endcol - string.len(z) + 1
   table.sort(entries)
   --require'luadev'.print(vim.inspect(entries))
