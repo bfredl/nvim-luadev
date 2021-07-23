@@ -1,23 +1,47 @@
 command! Luadev lua require'luadev'.start()
 
 noremap <Plug>(Luadev-RunLine) <Cmd>lua require'luadev'.exec(vim.api.nvim_get_current_line())<cr>
-vnoremap <silent> <Plug>(Luadev-Run) :<c-u>call luaeval("require'luadev'.exec(_A)", <SID>get_visual_selection())<cr>
+vnoremap <silent> <Plug>(Luadev-Run) :<c-u>call <SID>luadev_run_operator('visual')<cr>
+noremap <silent> <Plug>(Luadev-RunOperator) :<c-u>set opfunc=<SID>luadev_run_operator<cr>g@
 noremap <silent> <Plug>(Luadev-RunWord) :<c-u>call luaeval("require'luadev'.exec(_A)", <SID>get_current_word())<cr>
 inoremap <Plug>(Luadev-Complete) <Cmd>lua require'luadev.complete'()<cr>
 
+
 " thanks to @xolox on stackoverflow
-function! s:get_visual_selection()
-    let [lnum1, col1] = getpos("'<")[1:2]
-    let [lnum2, col2] = getpos("'>")[1:2]
+" same function for visual and normal. Except visual passes a parameter.
+function! s:luadev_run_operator(type = '')
+    if a:type == "visual"
+        let mode = "visual"
+    else
+        let mode = "normal"
+    end
+
+    if mode == 'visual'
+        let [lnum1, col1] = getpos("'<")[1:2]
+        let [lnum2, col2] = getpos("'>")[1:2]
+    elseif mode == 'normal'
+        let [lnum1, col1] = getpos("'[")[1:2]
+        let [lnum2, col2] = getpos("']")[1:2]
+    endif
 
     if lnum1 > lnum2
       let [lnum1, col1, lnum2, col2] = [lnum2, col2, lnum1, col1]
     endif
 
+    " Normal motions that are more than one line are forced to linewise
+    if lnum1 != lnum2 && mode =="normal"
+        let linewise = v:true
+    else
+        let linewise = v:false
+    end
+
     let lines = getline(lnum1, lnum2)
-    let lines[-1] = lines[-1][: col2 - (&selection == 'inclusive' ? 1 : 2)]
-    let lines[0] = lines[0][col1 - 1:]
-    return join(lines, "\n")."\n"
+    if linewise == v:false
+        let lines[-1] = lines[-1][: col2 - (&selection == 'inclusive' ? 1 : 2)]
+        let lines[0] = lines[0][col1 - 1:]
+    end
+    let lines =  join(lines, "\n")."\n"
+    call luaeval("require'luadev'.exec(_A)", lines)
 endfunction
 
 function! s:get_current_word()
