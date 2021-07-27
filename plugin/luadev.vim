@@ -2,7 +2,7 @@ command! Luadev lua require'luadev'.start()
 
 noremap <Plug>(Luadev-RunLine) <Cmd>lua require'luadev'.exec(vim.api.nvim_get_current_line())<cr>
 vnoremap <silent> <Plug>(Luadev-Run) :<c-u>call <SID>luadev_run_operator(v:true)<cr>
-noremap <silent> <Plug>(Luadev-RunOperator) :<c-u>set opfunc=<SID>luadev_run_operator<cr>g@
+nnoremap <silent> <Plug>(Luadev-Run) :<c-u>set opfunc=<SID>luadev_run_operator<cr>g@
 noremap <silent> <Plug>(Luadev-RunWord) :<c-u>call luaeval("require'luadev'.exec(_A)", <SID>get_current_word())<cr>
 inoremap <Plug>(Luadev-Complete) <Cmd>lua require'luadev.complete'()<cr>
 
