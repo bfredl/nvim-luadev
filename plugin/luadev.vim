@@ -21,7 +21,7 @@ function! s:luadev_run_operator(is_op)
         let lines[0] = lines[0][col1 - 1:]
     end
     let lines =  join(lines, "\n")."\n"
-    call luaeval("require'luadev'.exec(_A)", lines)
+    call v:lua.require'luadev'.exec(lines)
 endfunction
 
 function! s:get_current_word()
