@@ -30,7 +30,7 @@ local function complete()
     insertify(obj)
   end
 
-  local index = (getmetatable(obj) or {}).__index
+  local index = (debug.getmetatable(obj) or {}).__index
   if type(index) == 'table' then
     insertify(index)
   end
