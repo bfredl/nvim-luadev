@@ -1,4 +1,4 @@
-command! Luadev lua require'luadev'.start()
+command! -bar Luadev lua require'luadev'.start()
 
 noremap <Plug>(Luadev-RunLine) <Cmd>lua require'luadev'.exec(vim.api.nvim_get_current_line())<cr>
 vnoremap <silent> <Plug>(Luadev-Run) :<c-u>call <SID>luadev_run_operator(v:true)<cr>
