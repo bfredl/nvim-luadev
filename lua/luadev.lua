@@ -235,6 +235,7 @@ local funcs = {
   append_buf=append_buf,
   err_wrap = err_wrap,
   schedule_wrap = schedule_wrap,
+  coro_run = coro_run,
 }
 
 -- TODO: export abstraction for autoreload
