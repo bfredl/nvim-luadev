@@ -46,7 +46,7 @@ local function splitlines(str)
   return vim.split(str, "\n", true)
 end
 
-local function append_buf(lines, hl)
+local function append_buf(lines, hl, penda)
   if s.buf == nil then
     create_buf()
   end
@@ -55,7 +55,12 @@ local function append_buf(lines, hl)
     lines = splitlines(lines)
   end
 
-  a.nvim_buf_set_lines(s.buf, l0, l0, true, lines)
+  if penda then
+    local linelen = #(a.nvim_buf_get_lines(s.buf, l0-1, l0, false)[1])
+    a.nvim_buf_set_text(s.buf, l0-1, linelen, l0-1, linelen, lines)
+  else
+    a.nvim_buf_set_lines(s.buf, l0, l0, true, lines)
+  end
   local l1 = a.nvim_buf_line_count(s.buf)
   if hl ~= nil then
     for i = l0, l1-1 do
@@ -131,7 +136,8 @@ local function coro_run(chunk, doeval)
       if res[2] == nil then
         vim.schedule(thunk)
       elseif type(res[2]) == "string" then
-        append_buf(res[2])
+        append_buf(res[2],nil,true)
+        vim.cmd'redraw' -- uugh, should not be needed
         vim.schedule(thunk)
       elseif type(res[1]) == "function" then
         res[2](thunk)
