@@ -22,7 +22,7 @@ local function open_win()
   end
   create_buf()
   local w0 = a.nvim_get_current_win()
-  a.nvim_command("new")
+  a.nvim_command("split")
   local w = a.nvim_get_current_win()
   a.nvim_win_set_buf(w,s.buf)
   a.nvim_set_current_win(w0)
@@ -103,9 +103,54 @@ local function dedent(str, leave_indent)
   return str
 end
 
+local function coro_run(chunk, doeval)
+  local coro = coroutine.create(chunk)
+  local thunk
+  thunk = function(...)
+    local oldprint = _G.print
+    _G.print = luadev_print
+    local res = vim.F.pack_len(coroutine.resume(coro, ...))
+    _G.print = oldprint
+    if not res[1] then
+      _G._errstack = coro
+      -- if the only frame on the traceback is the chunk itself, skip the traceback
+      if debug.getinfo(coro, 0,"f").func ~= chunk then
+        res[2] = debug.traceback(coro, res[2], 0)
+      end
+      append_buf(res[2],"WarningMsg")
+    end
+
+    if coroutine.status(coro) == 'dead' then
+      if doeval or res[2] ~= nil or res.n > 2 then
+        append_buf(luadev_inspect(res[2]))
+        if res.n > 2 then
+          append_buf("MERE", "WarningMsg") -- TODO: implement me
+        end
+      end
+    elseif coroutine.status(coro) == 'suspended' then
+      if res[2] == nil then
+        vim.schedule(thunk)
+      elseif type(res[2]) == "string" then
+        append_buf(res[2])
+        vim.schedule(thunk)
+      elseif type(res[1]) == "function" then
+        res[2](thunk)
+      else
+        error 'WHATTTAAF'
+      end
+    end
+
+    return res
+  end
+  return thunk()
+end
+
 local function ld_pcall(chunk, ...)
   local coro = coroutine.create(chunk)
+    local oldprint = _G.print
+    _G.print = luadev_print
   local res = {coroutine.resume(coro, ...)}
+    _G.print = oldprint
   if not res[1] then
     _G._errstack = coro
     -- if the only frame on the traceback is the chunk itself, skip the traceback
@@ -118,18 +163,20 @@ end
 
 local function default_reader(str, count)
   local name = "@[luadev "..count.."]"
+  local doeval = true
   local chunk, err = loadstring("return \n"..str, name)
   if chunk == nil then
     chunk, err = loadstring(str, name)
+    doeval = false
   end
-  return chunk, err
+  return chunk, err, doeval
 end
 
 local function exec(str)
   local count = s.execount + 1
   s.execount = count
   local reader = s.reader or default_reader
-  local chunk, err = reader(str, count)
+  local chunk, err, doeval = reader(str, count)
   local inlines = splitlines(dedent(str))
   if inlines[#inlines] == "" then
     inlines[#inlines] = nil
@@ -147,15 +194,7 @@ local function exec(str)
   if chunk == nil then
     append_buf(err,"WarningMsg")
   else
-    local oldprint = _G.print
-    _G.print = luadev_print
-    local st, res = ld_pcall(chunk)
-    _G.print = oldprint
-    if st == false then
-      append_buf(res,"WarningMsg")
-    elseif doeval or res ~= nil then
-      append_buf(luadev_inspect(res))
-    end
+    coro_run(chunk, doeval)
   end
   append_buf({""})
 end
